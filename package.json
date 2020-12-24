@@ -2,18 +2,19 @@
   "name": "clean-node-api",
   "version": "1.0.0",
   "description": "",
+  "author": "",
+  "license": "ISC",
   "main": "index.js",
   "scripts": {
-    "test": "jest --watchAll",
-    "test:staged": "jest --passWithNoTests"
+    "test": "jest --watchAll --silent --colors --noStackTrace",
+    "test:staged": "jest --passWithNoTests --findRelatedTests --silent --noStackTrace",
+    "test:ci": "jest --coverage"
   },
   "standard": {
     "env": [
       "jest"
     ]
   },
-  "author": "",
-  "license": "ISC",
   "devDependencies": {
     "husky": "^5.0.6",
     "jest": "^26.6.3",
