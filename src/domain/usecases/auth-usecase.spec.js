@@ -21,7 +21,6 @@ const makeEncrypterWithError = () => {
       throw new Error()
     }
   }
-
   return new EncrypterSpy()
 }
 
@@ -44,7 +43,6 @@ const makeTokenGeneratorWithError = () => {
       throw new Error()
     }
   }
-
   return new TokenGeneratorSpy()
 }
 
@@ -70,24 +68,45 @@ const makeLoadUserByEmailRepositoryWithError = () => {
       throw new Error()
     }
   }
-
   return new LoadUserByEmailRepository()
+}
+
+const makeUpdateAccessTokenRepository = () => {
+  class UpdateAccessTokenRepository {
+    async update (userId, accessToken) {
+      this.userId = userId
+      this.accessToken = accessToken
+    }
+  }
+  return new UpdateAccessTokenRepository()
+}
+
+const makeUpdateAccessTokenRepositoryWithError = () => {
+  class UpdateAccessTokenRepository {
+    async update () {
+      throw new Error()
+    }
+  }
+  return new UpdateAccessTokenRepository()
 }
 
 const makeSut = () => {
   const encrypterSpy = makeEncrypter()
   const loadUserByEmailRepositorySpy = makeLoadUserByEmailRepository()
   const tokenGeneratorSpy = makeTokenGenerator()
+  const updateAccessTokenRepositorySpy = makeUpdateAccessTokenRepository()
   const sut = new AuthUseCase({
     loadUserByEmailRepository: loadUserByEmailRepositorySpy,
     encrypter: encrypterSpy,
-    tokenGenerator: tokenGeneratorSpy
+    tokenGenerator: tokenGeneratorSpy,
+    updateAccessTokenRepository: updateAccessTokenRepositorySpy
   })
   return {
     sut,
     loadUserByEmailRepositorySpy,
     encrypterSpy,
-    tokenGeneratorSpy
+    tokenGeneratorSpy,
+    updateAccessTokenRepositorySpy
   }
 }
 
@@ -144,10 +163,18 @@ describe('Auth UseCase', () => {
     expect(accessToken).toBeTruthy()
   })
 
+  test('Should call UpdateAccessTokenRepository with correct values', async () => {
+    const { sut, loadUserByEmailRepositorySpy, updateAccessTokenRepositorySpy, tokenGeneratorSpy } = makeSut()
+    await sut.auth('valid_email@gmail.com', 'valid_password')
+    expect(updateAccessTokenRepositorySpy.userId).toBe(loadUserByEmailRepositorySpy.user.id)
+    expect(updateAccessTokenRepositorySpy.accessToken).toBe(tokenGeneratorSpy.accessToken)
+  })
+
   test('Should throw if invalid dependencies are provided', async () => {
     const invalid = {}
     const loadUserByEmailRepository = makeLoadUserByEmailRepository()
     const encrypter = makeEncrypter()
+    const tokenGenerator = makeUpdateAccessTokenRepository()
     const suts = [].concat(
       new AuthUseCase(),
       new AuthUseCase({
@@ -171,6 +198,17 @@ describe('Auth UseCase', () => {
         loadUserByEmailRepository,
         encrypter,
         tokenGenerator: invalid
+      }),
+      new AuthUseCase({
+        loadUserByEmailRepository,
+        encrypter,
+        tokenGenerator
+      }),
+      new AuthUseCase({
+        loadUserByEmailRepository,
+        encrypter,
+        tokenGenerator,
+        updateAccessTokenRepository: invalid
       })
     )
     for (const sut of suts) {
@@ -178,9 +216,11 @@ describe('Auth UseCase', () => {
       expect(promise).rejects.toThrow()
     }
   })
+
   test('Should throw if any dependency throws', async () => {
     const loadUserByEmailRepository = makeLoadUserByEmailRepository()
     const encrypter = makeEncrypter()
+    const tokenGenerator = makeTokenGenerator()
     const suts = [].concat(
       new AuthUseCase({
         loadUserByEmailRepository: makeLoadUserByEmailRepositoryWithError()
@@ -193,6 +233,12 @@ describe('Auth UseCase', () => {
         loadUserByEmailRepository,
         encrypter,
         tokenGenerator: makeTokenGeneratorWithError()
+      }),
+      new AuthUseCase({
+        loadUserByEmailRepository,
+        encrypter,
+        tokenGenerator,
+        updateAccessTokenRepository: makeUpdateAccessTokenRepositoryWithError()
       })
     )
     for (const sut of suts) {
